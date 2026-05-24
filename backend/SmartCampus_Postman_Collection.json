@@ -1,0 +1,905 @@
+{
+	"info": {
+		"_postman_id": "sc-api-2026",
+		"name": "Smart Campus API — Complete Test Suite",
+		"description": "Comprehensive testing collection for the Smart Campus backend API.\n\n## Setup\n1. Set `baseUrl` variable to `http://localhost:5000`\n2. Run requests in order: Register → Login → then test other endpoints\n3. Tokens are auto-captured from login/register responses\n\n## Test Coverage\n- 13 API endpoints\n- Auth flow (register, login, profile)\n- Dashboard (summary, staff, analytics)\n- Issues (CRUD, assign, status, escalation)\n- Validation & error handling\n- Role-based access control",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{"key": "baseUrl", "value": "http://localhost:5000", "type": "string"},
+		{"key": "studentToken", "value": "", "type": "string"},
+		{"key": "staffToken", "value": "", "type": "string"},
+		{"key": "adminToken", "value": "", "type": "string"},
+		{"key": "ticketId", "value": "", "type": "string"},
+		{"key": "staffUserId", "value": "", "type": "string"},
+		{"key": "adminUserId", "value": "", "type": "string"},
+		{"key": "studentUserId", "value": "", "type": "string"},
+		{"key": "ticketId2", "value": "", "type": "string"}
+	],
+	"item": [
+		{
+			"name": "00 — Health & Base",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/health"
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);",
+						"pm.test('has timestamp', () => pm.expect(pm.response.json().timestamp).to.be.a('string'));"
+					]}}]
+				},
+				{
+					"name": "API Root",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1"
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('API running message', () => pm.expect(pm.response.json().message).to.include('running'));"
+					]}}]
+				},
+				{
+					"name": "404 — Unknown Route",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/nonexistent"
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 404', () => pm.response.to.have.status(404));",
+						"pm.test('success is false', () => pm.expect(pm.response.json().success).to.be.false);"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "01 — Auth: Register",
+			"item": [
+				{
+					"name": "Register Student (valid)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test Student\",\"email\":\"student_{{$timestamp}}@test.com\",\"password\":\"password123\",\"role\":\"student\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 201', () => pm.response.to.have.status(201));",
+						"const body = pm.response.json();",
+						"pm.test('success true', () => pm.expect(body.success).to.be.true);",
+						"pm.test('has token', () => pm.expect(body.data.token).to.be.a('string'));",
+						"pm.test('has user obj', () => pm.expect(body.data.user).to.have.property('id'));",
+						"pm.test('role is student', () => pm.expect(body.data.user.role).to.eql('student'));",
+						"pm.test('no password leaked', () => pm.expect(body.data.user.password).to.be.undefined);",
+						"pm.collectionVariables.set('studentToken', body.data.token);",
+						"pm.collectionVariables.set('studentUserId', body.data.user.id);"
+					]}}]
+				},
+				{
+					"name": "Register Staff (valid)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test Staff\",\"email\":\"staff_{{$timestamp}}@test.com\",\"password\":\"password123\",\"role\":\"staff\",\"department\":\"it\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 201', () => pm.response.to.have.status(201));",
+						"const body = pm.response.json();",
+						"pm.test('role is staff', () => pm.expect(body.data.user.role).to.eql('staff'));",
+						"pm.test('dept is it', () => pm.expect(body.data.user.department).to.eql('it'));",
+						"pm.collectionVariables.set('staffToken', body.data.token);",
+						"pm.collectionVariables.set('staffUserId', body.data.user.id);"
+					]}}]
+				},
+				{
+					"name": "Register Admin (valid)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test Admin\",\"email\":\"admin_{{$timestamp}}@test.com\",\"password\":\"password123\",\"role\":\"admin\",\"department\":\"administration\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 201', () => pm.response.to.have.status(201));",
+						"const body = pm.response.json();",
+						"pm.test('role is admin', () => pm.expect(body.data.user.role).to.eql('admin'));",
+						"pm.collectionVariables.set('adminToken', body.data.token);",
+						"pm.collectionVariables.set('adminUserId', body.data.user.id);"
+					]}}]
+				},
+				{
+					"name": "Register — Missing name (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"\",\"email\":\"x@test.com\",\"password\":\"password123\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('success false', () => pm.expect(pm.response.json().success).to.be.false);"
+					]}}]
+				},
+				{
+					"name": "Register — Invalid email (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test\",\"email\":\"not-an-email\",\"password\":\"password123\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('email error', () => pm.expect(pm.response.json().message).to.include('email'));"
+					]}}]
+				},
+				{
+					"name": "Register — Short password (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test\",\"email\":\"short@test.com\",\"password\":\"123\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('password error', () => pm.expect(pm.response.json().message).to.include('Password'));"
+					]}}]
+				},
+				{
+					"name": "Register — Invalid role (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Test\",\"email\":\"role@test.com\",\"password\":\"password123\",\"role\":\"superadmin\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('role error', () => pm.expect(pm.response.json().message).to.include('Role'));"
+					]}}]
+				},
+				{
+					"name": "Register — Staff missing dept (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Staff NoDept\",\"email\":\"nodept@test.com\",\"password\":\"password123\",\"role\":\"staff\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('dept error', () => pm.expect(pm.response.json().message).to.include('Department'));"
+					]}}]
+				},
+				{
+					"name": "Register — Duplicate email (409)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/register",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"name\":\"Dup User\",\"email\":\"dup_fixed@test.com\",\"password\":\"password123\"}"}
+					},
+					"event": [
+						{"listen": "prerequest", "script": {"type": "text/javascript", "exec": [
+							"// First call to register, second will be the actual test",
+							"pm.sendRequest({url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/register', method: 'POST', header: {'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify({name:'Dup User',email:'dup_fixed@test.com',password:'password123'})}});"
+						]}},
+						{"listen": "test", "script": {"type": "text/javascript", "exec": [
+							"pm.test('Status 409', () => pm.response.to.have.status(409));"
+						]}}
+					]
+				}
+			]
+		},
+		{
+			"name": "02 — Auth: Login",
+			"item": [
+				{
+					"name": "Login — Missing password (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/login",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"email\":\"x@test.com\",\"password\":\"\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('password error', () => pm.expect(pm.response.json().message).to.include('Password'));"
+					]}}]
+				},
+				{
+					"name": "Login — Wrong credentials (401)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/login",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"email\":\"nonexistent@test.com\",\"password\":\"wrongpassword\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 401', () => pm.response.to.have.status(401));",
+						"pm.test('invalid creds msg', () => pm.expect(pm.response.json().message).to.include('Invalid'));"
+					]}}]
+				},
+				{
+					"name": "Login — Empty body (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/auth/login",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "03 — Auth: Get Current User",
+			"item": [
+				{
+					"name": "GET /me — No token (401)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/auth/me"
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 401', () => pm.response.to.have.status(401));"
+					]}}]
+				},
+				{
+					"name": "GET /me — Invalid token (401)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/auth/me",
+						"header": [{"key": "Authorization", "value": "Bearer invalidtoken123"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 401', () => pm.response.to.have.status(401));"
+					]}}]
+				},
+				{
+					"name": "GET /me — Student (200)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/auth/me",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has user', () => pm.expect(body.data.user).to.have.property('id'));",
+						"pm.test('has email', () => pm.expect(body.data.user.email).to.be.a('string'));",
+						"pm.test('no password', () => pm.expect(body.data.user.password).to.be.undefined);"
+					]}}]
+				},
+				{
+					"name": "GET /me — Admin (200)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/auth/me",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('role is admin', () => pm.expect(pm.response.json().data.user.role).to.eql('admin'));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "04 — Issues: Create",
+			"item": [
+				{
+					"name": "Create Issue — Student (201)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Broken water pipe in Block A\",\"description\":\"Water is leaking from the pipe near room 205 in Block A. The floor is completely wet and slippery.\",\"category\":\"plumbing\",\"location\":\"Block A, Room 205\",\"priority\":\"high\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 201', () => pm.response.to.have.status(201));",
+						"const body = pm.response.json();",
+						"pm.test('success', () => pm.expect(body.success).to.be.true);",
+						"pm.test('has ticketId', () => pm.expect(body.data.issue.ticketId).to.match(/^CMP-/));",
+						"pm.test('status is reported', () => pm.expect(body.data.issue.status).to.eql('reported'));",
+						"pm.test('priority is high', () => pm.expect(body.data.issue.priority).to.eql('high'));",
+						"pm.test('dept resolved', () => pm.expect(body.data.issue.department).to.eql('maintenance'));",
+						"pm.test('has escalationDeadline', () => pm.expect(body.data.issue.escalationDeadline).to.be.a('string'));",
+						"pm.collectionVariables.set('ticketId', body.data.issue.ticketId);"
+					]}}]
+				},
+				{
+					"name": "Create Issue 2 — Admin with assignee (201)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"WiFi not working in Library\",\"description\":\"The WiFi access point in the main library reading hall is completely down since morning.\",\"category\":\"wifi\",\"location\":\"Main Library, 2nd Floor\",\"priority\":\"critical\",\"assignedTo\":\"{{staffUserId}}\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 201', () => pm.response.to.have.status(201));",
+						"const body = pm.response.json();",
+						"pm.test('status is assigned', () => pm.expect(body.data.issue.status).to.eql('assigned'));",
+						"pm.test('dept is it', () => pm.expect(body.data.issue.department).to.eql('it'));",
+						"pm.collectionVariables.set('ticketId2', body.data.issue.ticketId);"
+					]}}]
+				},
+			{
+				"name": "Create Issue 3 — With image attachment (201)",
+				"request": {
+					"method": "POST",
+					"url": "{{baseUrl}}/api/v1/issues",
+					"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}],
+					"body": {
+						"mode": "formdata",
+						"formdata": [
+							{"key": "title", "value": "Broken window in Lab 3", "type": "text"},
+							{"key": "description", "value": "The window near the second row of computers is cracked and letting cold air in.", "type": "text"},
+							{"key": "category", "value": "furniture", "type": "text"},
+							{"key": "location", "value": "CS Lab 3, Block C", "type": "text"},
+							{"key": "priority", "value": "medium", "type": "text"},
+							{"key": "image", "type": "file", "src": "", "description": "Select a JPG/PNG image (max 5MB) before sending"}
+						]
+					}
+				},
+				"event": [{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// NOTE: This test requires you to select an actual image file in the 'image' field before sending.",
+							"// If no file is selected, the issue will still be created successfully (201) but without attachments.",
+							"const status = pm.response.code;",
+							"pm.test('Status 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('success', () => pm.expect(body.success).to.be.true);",
+							"pm.test('has ticketId', () => pm.expect(body.data.issue.ticketId).to.match(/^CMP-/));",
+							"pm.test('dept is maintenance', () => pm.expect(body.data.issue.department).to.eql('maintenance'));",
+							"pm.test('attachments is array', () => pm.expect(body.data.issue.attachments).to.be.an('array'));",
+							"if (body.data.issue.attachments.length > 0) {",
+							"  pm.test('attachment has url', () => pm.expect(body.data.issue.attachments[0].url).to.be.a('string'));",
+							"  pm.test('attachment has publicId', () => pm.expect(body.data.issue.attachments[0].publicId).to.be.a('string'));",
+							"  pm.test('attachment has originalName', () => pm.expect(body.data.issue.attachments[0].originalName).to.be.a('string'));",
+							"  pm.test('attachment has format', () => pm.expect(body.data.issue.attachments[0].format).to.be.a('string'));",
+							"  pm.test('attachment has bytes', () => pm.expect(body.data.issue.attachments[0].bytes).to.be.a('number'));",
+							"  pm.test('url points to cloudinary', () => pm.expect(body.data.issue.attachments[0].url).to.include('cloudinary'));",
+							"}"
+						]
+					}
+				}]
+			},
+			{
+				"name": "Create Issue — Image with missing fields (400)",
+				"request": {
+					"method": "POST",
+					"url": "{{baseUrl}}/api/v1/issues",
+					"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}],
+					"body": {
+						"mode": "formdata",
+						"formdata": [
+							{"key": "title", "value": "Valid Title Here", "type": "text"},
+							{"key": "description", "value": "This is a valid description for testing", "type": "text"},
+							{"key": "image", "type": "file", "src": "", "description": "Select a JPG/PNG image"}
+						]
+					}
+				},
+				"event": [{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 400', () => pm.response.to.have.status(400));",
+							"pm.test('missing fields error', () => pm.expect(pm.response.json().message).to.include('required'));"
+						]
+					}
+				}]
+			},
+			{
+				"name": "Create Issue — Form-data without image (201)",
+				"request": {
+					"method": "POST",
+					"url": "{{baseUrl}}/api/v1/issues",
+					"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}],
+					"body": {
+						"mode": "formdata",
+						"formdata": [
+							{"key": "title", "value": "Streetlight not working near gate", "type": "text"},
+							{"key": "description", "value": "The streetlight near the main entrance gate has been off for three days now. Its very dark at night.", "type": "text"},
+							{"key": "category", "value": "light", "type": "text"},
+							{"key": "location", "value": "Main Gate Entrance", "type": "text"},
+							{"key": "priority", "value": "high", "type": "text"}
+						]
+					}
+				},
+				"event": [{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('success', () => pm.expect(body.success).to.be.true);",
+							"pm.test('dept is electrical', () => pm.expect(body.data.issue.department).to.eql('electrical'));",
+							"pm.test('no attachments', () => pm.expect(body.data.issue.attachments).to.have.lengthOf(0));"
+						]
+					}
+				}]
+			},
+				{
+					"name": "Create Issue — No auth (401)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Test Issue\",\"description\":\"This should fail auth check completely\",\"category\":\"wifi\",\"location\":\"Test\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 401', () => pm.response.to.have.status(401));"
+					]}}]
+				},
+				{
+					"name": "Create Issue — Short title (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Hi\",\"description\":\"This is a valid description for testing\",\"category\":\"wifi\",\"location\":\"Block B\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('title error', () => pm.expect(pm.response.json().message).to.include('Title'));"
+					]}}]
+				},
+				{
+					"name": "Create Issue — Short description (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Valid Title Here\",\"description\":\"short\",\"category\":\"wifi\",\"location\":\"Block B\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('desc error', () => pm.expect(pm.response.json().message).to.include('Description'));"
+					]}}]
+				},
+				{
+					"name": "Create Issue — Missing category (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Valid Title Here\",\"description\":\"This is a valid description for testing\",\"category\":\"\",\"location\":\"Block B\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('category error', () => pm.expect(pm.response.json().message).to.include('Category'));"
+					]}}]
+				},
+				{
+					"name": "Create Issue — Invalid priority (400)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Valid Title Here\",\"description\":\"This is a valid description for testing\",\"category\":\"wifi\",\"location\":\"Block B\",\"priority\":\"urgent\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('priority error', () => pm.expect(pm.response.json().message).to.include('Priority'));"
+					]}}]
+				},
+				{
+					"name": "Create Issue — Student tries assign (403)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"title\":\"Valid Title Here\",\"description\":\"This is a valid description for testing\",\"category\":\"wifi\",\"location\":\"Block B\",\"assignedTo\":\"{{staffUserId}}\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "05 — Issues: List & Get",
+			"item": [
+				{
+					"name": "List Issues — Student (200)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api","v1","issues"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has issues array', () => pm.expect(body.data.issues).to.be.an('array'));",
+						"pm.test('has pagination', () => pm.expect(body.data.pagination).to.have.property('total'));",
+						"pm.test('has filters', () => pm.expect(body.data.filters).to.be.an('object'));"
+					]}}]
+				},
+				{
+					"name": "List Issues — Filter by status (200)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues?status=reported", "host": ["{{baseUrl}}"], "path": ["api","v1","issues"], "query": [{"key":"status","value":"reported"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const issues = pm.response.json().data.issues;",
+						"pm.test('all reported', () => issues.forEach(i => pm.expect(i.status).to.eql('reported')));"
+					]}}]
+				},
+				{
+					"name": "List Issues — Filter by priority (200)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues?priority=high", "host": ["{{baseUrl}}"], "path": ["api","v1","issues"], "query": [{"key":"priority","value":"high"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));"
+					]}}]
+				},
+				{
+					"name": "List Issues — Invalid status filter (400)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues?status=closed", "host": ["{{baseUrl}}"], "path": ["api","v1","issues"], "query": [{"key":"status","value":"closed"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('status error', () => pm.expect(pm.response.json().message).to.include('Status'));"
+					]}}]
+				},
+				{
+					"name": "Get Issue by ticketId (200)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const issue = pm.response.json().data.issue;",
+						"pm.test('ticketId matches', () => pm.expect(issue.ticketId).to.eql(pm.collectionVariables.get('ticketId')));",
+						"pm.test('has createdBy populated', () => pm.expect(issue.createdBy).to.have.property('name'));"
+					]}}]
+				},
+				{
+					"name": "Get Issue — Not found (404)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/issues/CMP-999999",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 404', () => pm.response.to.have.status(404));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "06 — Issues: Assign",
+			"item": [
+				{
+					"name": "Assign Issue — Admin (200)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/assign",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"assignedTo\":\"{{adminUserId}}\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('status is assigned', () => pm.expect(pm.response.json().data.issue.status).to.eql('assigned'));"
+					]}}]
+				},
+				{
+					"name": "Assign Issue — Student forbidden (403)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/assign",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"assignedTo\":\"{{staffUserId}}\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				},
+				{
+					"name": "Assign Issue — Missing assignedTo (400)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/assign",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				},
+				{
+					"name": "Assign Issue — Invalid userId (400)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/assign",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"assignedTo\":\"not-a-valid-id\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "07 — Issues: Status Update",
+			"item": [
+				{
+					"name": "Update Status → in_progress (200)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/status",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"status\":\"in_progress\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('status updated', () => pm.expect(pm.response.json().data.issue.status).to.eql('in_progress'));"
+					]}}]
+				},
+				{
+					"name": "Update Status → resolved (200)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/status",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"status\":\"resolved\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('resolved', () => pm.expect(pm.response.json().data.issue.status).to.eql('resolved'));",
+						"pm.test('has resolvedAt', () => pm.expect(pm.response.json().data.issue.resolvedAt).to.be.a('string'));"
+					]}}]
+				},
+				{
+					"name": "Update Status — Invalid transition (400)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/status",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"status\":\"reported\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));",
+						"pm.test('transition error', () => pm.expect(pm.response.json().message).to.include('Cannot transition'));"
+					]}}]
+				},
+				{
+					"name": "Update Status — Invalid status value (400)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/status",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"status\":\"closed\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				},
+				{
+					"name": "Update Status — Student forbidden (403)",
+					"request": {
+						"method": "PATCH",
+						"url": "{{baseUrl}}/api/v1/issues/{{ticketId}}/status",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"},{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\"status\":\"resolved\"}"}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "08 — Issues: Assigned to Me",
+			"item": [
+				{
+					"name": "Assigned Issues — Staff (200)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/issues/assigned/me",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"pm.test('has issues', () => pm.expect(pm.response.json().data.issues).to.be.an('array'));"
+					]}}]
+				},
+				{
+					"name": "Assigned Issues — Student forbidden (403)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/issues/assigned/me",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "09 — Issues: Escalation",
+			"item": [
+				{
+					"name": "Escalation Sweep — Dry run (200)",
+					"request": {
+						"method": "POST",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues/escalations/run?dryRun=true", "host": ["{{baseUrl}}"], "path": ["api","v1","issues","escalations","run"], "query": [{"key":"dryRun","value":"true"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has processed count', () => pm.expect(body.data.processed).to.be.a('number'));",
+						"pm.test('has updatedIssues', () => pm.expect(body.data.updatedIssues).to.be.an('array'));"
+					]}}]
+				},
+				{
+					"name": "Escalation Sweep — Staff forbidden (403)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues/escalations/run",
+						"header": [{"key": "Authorization", "value": "Bearer {{staffToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				},
+				{
+					"name": "Escalation Sweep — Student forbidden (403)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/v1/issues/escalations/run",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				},
+				{
+					"name": "Escalation Sweep — Invalid dryRun (400)",
+					"request": {
+						"method": "POST",
+						"url": {"raw": "{{baseUrl}}/api/v1/issues/escalations/run?dryRun=maybe", "host": ["{{baseUrl}}"], "path": ["api","v1","issues","escalations","run"], "query": [{"key":"dryRun","value":"maybe"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				}
+			]
+		},
+		{
+			"name": "10 — Dashboard",
+			"item": [
+				{
+					"name": "Dashboard Summary — Student (200)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/dashboard",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has user', () => pm.expect(body.data.user).to.have.property('id'));",
+						"pm.test('has issueSummary', () => pm.expect(body.data.issueSummary).to.have.property('total'));",
+						"pm.test('has byStatus', () => pm.expect(body.data.issueSummary.byStatus).to.have.property('reported'));",
+						"pm.test('has recentIssues', () => pm.expect(body.data.recentIssues).to.be.an('array'));"
+					]}}]
+				},
+				{
+					"name": "Dashboard Summary — No auth (401)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/dashboard"
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 401', () => pm.response.to.have.status(401));"
+					]}}]
+				},
+				{
+					"name": "Staff Dashboard — Admin (200)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/dashboard/staff?page=1&limit=5", "host": ["{{baseUrl}}"], "path": ["api","v1","dashboard","staff"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"5"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has assignedIssues', () => pm.expect(body.data.assignedIssues).to.be.an('array'));",
+						"pm.test('has pagination', () => pm.expect(body.data.pagination).to.have.property('total'));"
+					]}}]
+				},
+				{
+					"name": "Staff Dashboard — Student forbidden (403)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/dashboard/staff",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				},
+				{
+					"name": "Staff Dashboard — Invalid page (400)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/dashboard/staff?page=-1", "host": ["{{baseUrl}}"], "path": ["api","v1","dashboard","staff"], "query": [{"key":"page","value":"-1"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				},
+				{
+					"name": "Analytics — Admin (200)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/dashboard/analytics?days=30", "host": ["{{baseUrl}}"], "path": ["api","v1","dashboard","analytics"], "query": [{"key":"days","value":"30"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 200', () => pm.response.to.have.status(200));",
+						"const body = pm.response.json();",
+						"pm.test('has days', () => pm.expect(body.data.days).to.eql(30));",
+						"pm.test('has overdueCount', () => pm.expect(body.data.overdueCount).to.be.a('number'));",
+						"pm.test('has breakdowns', () => pm.expect(body.data.breakdowns).to.have.property('status'));",
+						"pm.test('has trend', () => pm.expect(body.data.trend).to.be.an('array'));",
+						"pm.test('has avgResolution', () => pm.expect(body.data.averageResolutionHours).to.be.a('number'));"
+					]}}]
+				},
+				{
+					"name": "Analytics — Student forbidden (403)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/v1/dashboard/analytics",
+						"header": [{"key": "Authorization", "value": "Bearer {{studentToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 403', () => pm.response.to.have.status(403));"
+					]}}]
+				},
+				{
+					"name": "Analytics — Invalid days param (400)",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/api/v1/dashboard/analytics?days=abc", "host": ["{{baseUrl}}"], "path": ["api","v1","dashboard","analytics"], "query": [{"key":"days","value":"abc"}]},
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}]
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Status 400', () => pm.response.to.have.status(400));"
+					]}}]
+				}
+			]
+		}
+	]
+}
