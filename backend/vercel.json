@@ -6,11 +6,18 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/(.*?)(?:\\.(?:js|json|css|png|jpg|jpeg|gif|svg|ico|txt))?$",
-      "dest": "api/index.js"
-    },
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://smart-campus-khaki.vercel.app" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PATCH,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" }
+      ]
+    }
+  ],
+  "routes": [
     {
       "src": "/(.*)",
       "dest": "api/index.js"

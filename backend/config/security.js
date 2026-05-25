@@ -6,10 +6,17 @@ const ApiError = require("../utils/apiError");
  * @returns {import("cors").CorsOptions}
  */
 function buildCorsOptions() {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  const envOrigins = (process.env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+  const allowedOrigins = [
+    ...new Set([
+      ...envOrigins,
+      "https://smart-campus-khaki.vercel.app"
+    ])
+  ];
 
   const allowAllOrigins = allowedOrigins.length === 0;
 
@@ -42,10 +49,8 @@ function securityHeaders(req, res, next) {
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("X-XSS-Protection", "0");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-  res.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https: data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'");
 
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
