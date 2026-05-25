@@ -14,11 +14,13 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto redirect to login on 401
+// Auto redirect to login on 401 (only for token-auth failures, not login/register errors)
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {
