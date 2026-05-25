@@ -39,6 +39,14 @@ app.use(morgan("combined", {
   }
 }));
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Smart Campus API is running",
+    timestamp: req.requestTime
+  });
+});
+
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
