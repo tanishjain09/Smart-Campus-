@@ -55,19 +55,11 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.get("/api/v1", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Smart Campus API is running",
-    timestamp: req.requestTime
-  });
-});
-
-app.get("/api/v1/auth/me", protect, authController.getCurrentUser);
-app.use("/api/v1/auth", authLimiter, authRoutes);
-app.use("/api/v1/dashboard", dashboardRoutes);
-app.use("/api/v1/issues", issueRoutes);
-app.use("/api/v1/users", userRoutes);
+app.get("/auth/me", protect, authController.getCurrentUser);
+app.use("/auth", authLimiter, authRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/issues", issueRoutes);
+app.use("/users", userRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
